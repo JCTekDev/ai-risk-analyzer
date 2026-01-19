@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import httpx
 
 from .config import get_settings
 from .schemas import TramiteDocument, TramiteFolio
+
+
+logger = logging.getLogger(__name__)
 
 
 class JogetError(RuntimeError):
@@ -18,26 +22,40 @@ class JogetError(RuntimeError):
 class JogetClient:
     """Thin wrapper around Joget DX JSON API."""
 
-    def __init__(self, *, base_url: str | None = None, api_key: str | None = None):
+    def __init__(self, *, base_url: str | None = None, username: str | None = None, password: str | None = None):
         settings = get_settings()
         self._base_url = base_url or settings.joget_base_url.rstrip("/")
-        self._api_key = api_key or settings.joget_api_key
-        self._session = httpx.Client(timeout=10.0)
+        self._username = username or settings.joget_username
+        self._password = password or settings.joget_password
+        self._session = httpx.Client(timeout=30.0)  # Increased timeout to 30s
 
-    def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self._api_key}"}
+    def _auth(self) -> tuple[str, str]:
+        return (self._username, self._password)
 
-    def get_form_data(self, form_id: str, primary_key: str) -> dict[str, Any]:
+    def get_form_data(self, app_id: str, form_id: str, primary_key: str) -> dict[str, Any]:
         """Fetch form data using Joget's JSON API."""
 
-        url = f"{self._base_url}/api/json/form/{form_id}"
-        params = {"primaryKeyValue": primary_key}
-        response = self._session.get(url, params=params, headers=self._headers())
+        url = f"{self._base_url}/web/json/data/form/load/{app_id}/{form_id}/{primary_key}"
+        logger.debug(f"Joget GET: {url} (user={self._username})")
+        
+        try:
+            response = self._session.get(url, auth=self._auth())
+            logger.debug(f"Joget response: status={response.status_code}")
+        except httpx.ReadError as e:
+            logger.error(f"Joget connection error: {e}")
+            raise JogetError(f"Failed to connect to Joget at {url}: {e}") from e
+        except httpx.TimeoutException as e:
+            logger.error(f"Joget timeout: {e}")
+            raise JogetError(f"Joget request timed out at {url}: {e}") from e
+        
         if response.status_code >= 400:
+            logger.error(f"Joget HTTP error {response.status_code}: {response.text[:200]}")
             raise JogetError(f"Joget returned {response.status_code}: {response.text}")
         try:
             payload = response.json()
+            logger.debug(f"Joget returned {len(payload)} fields")
         except json.JSONDecodeError as exc:
+            logger.error(f"Joget returned invalid JSON: {response.text[:200]}")
             raise JogetError("Joget response is not valid JSON") from exc
         return payload
 
@@ -45,16 +63,42 @@ class JogetClient:
         """Hydrate a `TramiteFolio` model from Joget form data."""
 
         settings = get_settings()
-        raw = self.get_form_data(settings.joget_tramite_form_id, folio_id)
+        raw = self.get_form_data(settings.joget_app_id, settings.joget_tramite_form_id, folio_id)
+        
+        # Parse documents: Joget returns it as a JSON string
+        documents_raw = raw.get("documents", [])
+        if isinstance(documents_raw, str):
+            try:
+                documents_raw = json.loads(documents_raw)
+            except (json.JSONDecodeError, TypeError):
+                documents_raw = []
+        
         documents = [
             TramiteDocument(
                 name=doc.get("name", "unknown"),
-                required=bool(doc.get("required")),
-                uploaded=bool(doc.get("uploaded")),
+                required=self._parse_checkbox(doc.get("required")),
+                uploaded=self._parse_checkbox(doc.get("uploaded")),
             )
-            for doc in raw.get("documents", [])
+            for doc in documents_raw if isinstance(doc, dict)
         ]
-        return TramiteFolio.model_validate({**raw, "documents": documents})
+        
+        # Convert checkbox strings ("on" -> True, None -> False)
+        return TramiteFolio.model_validate({
+            **raw,
+            "documents": documents,
+            "requiere_reaseguro": self._parse_checkbox(raw.get("requiere_reaseguro")),
+            "es_urgente": self._parse_checkbox(raw.get("es_urgente")),
+        })
+
+    @staticmethod
+    def _parse_checkbox(value: Any) -> bool:
+        """Convert Joget checkbox value to boolean."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in ("on", "true", "1", "yes")
+        return False
+
 
     def close(self) -> None:
         self._session.close()
