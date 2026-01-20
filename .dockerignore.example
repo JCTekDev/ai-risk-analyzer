@@ -1,0 +1,39 @@
+# Production Dockerfile - multi-stage build for smaller image
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY pyproject.toml /app/
+COPY src /app/src
+
+# Install dependencies to a virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --upgrade pip setuptools wheel && pip install -e .
+
+# Final stage
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy project files
+COPY pyproject.toml README.md .gitignore /app/
+COPY src /app/src
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=5)" || exit 1
+
+CMD ["uvicorn", "risk_analyzer.api:app", "--host", "0.0.0.0", "--port", "8000"]

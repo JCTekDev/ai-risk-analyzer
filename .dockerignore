@@ -1,0 +1,69 @@
+# Git
+.git
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Documentation (except README)
+docs/
+DOCKER.md
+
+# Test fixtures and cache
+.pytest_cache/
+tests/
+
+# Build artifacts
+target/
+*.tar.gz
+
+# Node (if any)
+node_modules/
+npm-debug.log

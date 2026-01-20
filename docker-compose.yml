@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  risk-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: risk-analyzer
+    ports:
+      - "8000:8000"
+    environment:
+      # Load from .env file - these are examples and should be overridden
+      - JOGET_BASE_URL=${JOGET_BASE_URL:-http://joget:8080/jw}
+      - JOGET_USERNAME=${JOGET_USERNAME:-admin}
+      - JOGET_PASSWORD=${JOGET_PASSWORD:-admin}
+      - JOGET_APP_ID=${JOGET_APP_ID:-insurancePoliciesWorkflow}
+      - JOGET_TRAMITE_FORM_ID=${JOGET_TRAMITE_FORM_ID:-insurance_policies}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - ENV_FILE=/app/.env
+    volumes:
+      - ./.env:/app/.env:ro
+    depends_on:
+      - joget
+    networks:
+      - risk-analyzer-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Optional: Joget service for local development/testing
+  joget:
+    image: joget/joget-enterprise:8.0.10
+    container_name: risk-analyzer-joget
+    ports:
+      - "8080:8080"
+    environment:
+      - CATALINA_OPTS=-Xmx1024m
+    volumes:
+      - joget-data:/opt/joget/data
+    networks:
+      - risk-analyzer-network
+    restart: unless-stopped
+    profiles:
+      - with-joget
+
+networks:
+  risk-analyzer-network:
+    driver: bridge
+
+volumes:
+  joget-data:
+    driver: local
