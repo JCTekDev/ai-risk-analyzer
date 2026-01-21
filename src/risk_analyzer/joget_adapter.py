@@ -82,13 +82,20 @@ class JogetClient:
             for doc in documents_raw if isinstance(doc, dict)
         ]
         
-        # Convert checkbox strings ("on" -> True, None -> False)
-        return TramiteFolio.model_validate({
+        # Prepare data dict with fallback: if 'folio' field is missing, ensure 'id' is available
+        # This handles the case where the Joget form removed the 'folio' field
+        data = {
             **raw,
             "documents": documents,
             "requiere_reaseguro": self._parse_checkbox(raw.get("requiere_reaseguro")),
             "es_urgente": self._parse_checkbox(raw.get("es_urgente")),
-        })
+        }
+        
+        # If folio is not in data but id is, it will be used as fallback by TramiteFolio validator
+        if "folio" not in data and "id" in data:
+            logger.debug(f"Using 'id' field as folio identifier (folio field missing from Joget)")
+        
+        return TramiteFolio.model_validate(data)
 
     @staticmethod
     def _parse_checkbox(value: Any) -> bool:

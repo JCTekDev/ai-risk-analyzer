@@ -109,3 +109,52 @@ def test_tramite_folio_model_validation(joget_response_payload):
 
     assert len(folio.documents) == 3
     logger.info("✓ test_tramite_folio_model_validation PASSED")
+
+
+def test_tramite_folio_model_validation_with_id_field():
+    """Test TramiteFolio model parsing when 'folio' field is missing but 'id' field is present.
+    
+    This handles the case where the Joget form was updated and the 'folio' field was removed,
+    leaving only the 'id' field to identify the record.
+    """
+    logger.info("Starting test_tramite_folio_model_validation_with_id_field")
+    
+    # Simulating the actual Joget response for ID-000009 (without 'folio' field)
+    joget_response_without_folio = {
+        "createdByName": "Admin Admin",
+        "ramo": "Daños",
+        "risk_score": "",
+        "documents": "[]",
+        "catalog_line": "Línea A",
+        "dateModified": "2026-01-21 14:09:06.463",
+        "tipo_tramite": "Emisión",
+        "es_urgente": "on",
+        "risk_level": "",
+        "dateCreated": "2026-01-21 14:09:06.463",
+        "modifiedByName": "Admin Admin",
+        "monto_prima": "15000",
+        "estatus": "Enviado",
+        "createdBy": "admin",
+        "risk_analysis": "",
+        "modifiedBy": "admin",
+        "id": "ID-000009",
+        "requiere_reaseguro": "on"
+    }
+    
+    folio = TramiteFolio.model_validate(joget_response_without_folio)
+    logger.info(f"✓ TramiteFolio model validates from payload with 'id' field fallback")
+
+    # Verify that folio_id was populated from the 'id' field
+    assert folio.folio_id == "ID-000009"
+    logger.debug(f"✓ folio_id from 'id' field: {folio.folio_id}")
+    
+    # Verify other fields
+    assert folio.ramo == "Daños"
+    assert folio.tipo_tramite == "Emisión"
+    assert folio.monto_prima == 15000.0
+    assert folio.requiere_reaseguro is True
+    assert folio.es_urgente is True
+    assert folio.estatus == "Enviado"
+    logger.debug("✓ All fields validated correctly")
+    
+    logger.info("✓ test_tramite_folio_model_validation_with_id_field PASSED")
