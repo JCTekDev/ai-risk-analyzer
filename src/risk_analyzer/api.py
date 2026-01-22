@@ -127,6 +127,6 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "health": "/health",
-            "analyze": "/analyze/{folio_id}",
+            "analyze": "/analyze/{id}",
         },
     }

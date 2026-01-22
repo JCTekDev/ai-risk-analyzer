@@ -17,7 +17,7 @@ def heuristic_score(folio: TramiteFolio, *, signals: dict | None = None) -> Risk
     signal_keys = sorted(signals.keys()) if isinstance(signals, dict) else []
     logger.debug(
         "Starting heuristic scoring folio=%s ramo=%s prima=%.2f signals=%s",
-        folio.folio_id,
+        folio.id,
         folio.ramo,
         folio.monto_prima,
         signal_keys,
@@ -31,7 +31,7 @@ def heuristic_score(folio: TramiteFolio, *, signals: dict | None = None) -> Risk
         recommendations.append("Validar exposición por monto alto en ramo crítico")
         logger.debug(
             "Applied critical ramo premium rule folio=%s ramo=%s prima=%.2f increment=0.60",
-            folio.folio_id,
+            folio.id,
             folio.ramo,
             folio.monto_prima,
         )
@@ -39,7 +39,7 @@ def heuristic_score(folio: TramiteFolio, *, signals: dict | None = None) -> Risk
     if folio.requiere_reaseguro:
         score += 0.25
         recommendations.append("Confirmar capacidad de reasegurador")
-        logger.debug("Applied reinsurance rule folio=%s increment=0.25", folio.folio_id)
+        logger.debug("Applied reinsurance rule folio=%s increment=0.25", folio.id)
 
     missing_docs = _count_missing_docs(folio.documents)
     if missing_docs:
@@ -48,7 +48,7 @@ def heuristic_score(folio: TramiteFolio, *, signals: dict | None = None) -> Risk
         recommendations.append(f"Solicitar {missing_docs} documentos faltantes")
         logger.debug(
             "Applied missing docs rule folio=%s missing=%d increment=%.2f",
-            folio.folio_id,
+            folio.id,
             missing_docs,
             increment,
         )
@@ -56,7 +56,7 @@ def heuristic_score(folio: TramiteFolio, *, signals: dict | None = None) -> Risk
     if folio.es_urgente is True:
         score += 0.1
         recommendations.append("Priorizar folio urgente en cola")
-        logger.debug("Applied urgency rule folio=%s increment=0.10", folio.folio_id)
+        logger.debug("Applied urgency rule folio=%s increment=0.10", folio.id)
 
     score = max(0.0, min(1.0, score))
     level = "alto" if score >= 0.7 else "medio" if score >= 0.4 else "bajo"
@@ -67,7 +67,7 @@ def heuristic_score(folio: TramiteFolio, *, signals: dict | None = None) -> Risk
 
     logger.info(
         "Heuristic score complete folio=%s score=%.2f level=%s missing_docs=%d recommendations=%d",
-        folio.folio_id,
+        folio.id,
         score,
         level,
         missing_docs,
