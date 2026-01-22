@@ -78,7 +78,7 @@ def test_joget_client_connection_error():
 def joget_response_payload():
     """Mock JSON response from Joget Form API for non-integration tests."""
     return {
-        "folio": "WFE-123",
+        "id": "WFE-123",
         "ramo": "Daños",
         "tipo_tramite": "Emisión",
         "monto_prima": "1500000",
@@ -112,15 +112,11 @@ def test_tramite_folio_model_validation(joget_response_payload):
 
 
 def test_tramite_folio_model_validation_with_id_field():
-    """Test TramiteFolio model parsing when 'folio' field is missing but 'id' field is present.
-    
-    This handles the case where the Joget form was updated and the 'folio' field was removed,
-    leaving only the 'id' field to identify the record.
-    """
+    """Test TramiteFolio model parsing with actual Joget response using 'id' field."""
     logger.info("Starting test_tramite_folio_model_validation_with_id_field")
     
-    # Simulating the actual Joget response for ID-000009 (without 'folio' field)
-    joget_response_without_folio = {
+    # Actual Joget response for ID-000009 (uses 'id' field)
+    joget_response = {
         "createdByName": "Admin Admin",
         "ramo": "Daños",
         "risk_score": "",
@@ -141,8 +137,8 @@ def test_tramite_folio_model_validation_with_id_field():
         "requiere_reaseguro": "on"
     }
     
-    folio = TramiteFolio.model_validate(joget_response_without_folio)
-    logger.info(f"✓ TramiteFolio model validates from payload with 'id' field fallback")
+    folio = TramiteFolio.model_validate(joget_response)
+    logger.info(f"✓ TramiteFolio model validates from actual Joget payload")
 
     # Verify that folio_id was populated from the 'id' field
     assert folio.folio_id == "ID-000009"

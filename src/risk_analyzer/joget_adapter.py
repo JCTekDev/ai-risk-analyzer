@@ -59,11 +59,11 @@ class JogetClient:
             raise JogetError("Joget response is not valid JSON") from exc
         return payload
 
-    def fetch_tramite(self, folio_id: str) -> TramiteFolio:
+    def fetch_tramite(self, id: str) -> TramiteFolio:
         """Hydrate a `TramiteFolio` model from Joget form data."""
 
         settings = get_settings()
-        raw = self.get_form_data(settings.joget_app_id, settings.joget_tramite_form_id, folio_id)
+        raw = self.get_form_data(settings.joget_app_id, settings.joget_tramite_form_id, id)
         
         # Parse documents: Joget returns it as a JSON string
         documents_raw = raw.get("documents", [])
@@ -82,21 +82,13 @@ class JogetClient:
             for doc in documents_raw if isinstance(doc, dict)
         ]
         
-        # Prepare data dict with fallback: if 'folio' field is missing, map 'id' to 'folio'
-        # This handles the case where the Joget form removed the 'folio' field
-        data = {
+        # Convert checkbox strings ("on" -> True, None -> False)
+        return TramiteFolio.model_validate({
             **raw,
             "documents": documents,
             "requiere_reaseguro": self._parse_checkbox(raw.get("requiere_reaseguro")),
             "es_urgente": self._parse_checkbox(raw.get("es_urgente")),
-        }
-        
-        # If folio is not in data but id is, use id as the folio identifier
-        if "folio" not in data and "id" in data:
-            data["folio"] = data["id"]
-            logger.debug(f"Mapped 'id' field to 'folio' identifier: {data['folio']}")
-        
-        return TramiteFolio.model_validate(data)
+        })
 
     @staticmethod
     def _parse_checkbox(value: Any) -> bool:

@@ -63,16 +63,16 @@ async def health_check():
     return {"status": "healthy", "service": "risk-analyzer"}
 
 
-@app.post("/analyze/{folio_id}")
-async def analyze_risk(folio_id: str) -> Dict[str, Any]:
+@app.post("/analyze/{id}")
+async def analyze_risk(id: str) -> Dict[str, Any]:
     """
     Analyze risk for a given folio ID.
     
     Args:
-        folio_id: The primary key/folio ID from Joget
+        id: The primary key/folio ID from Joget
         
     Returns:
-        JSON with folio_id, folio data, signals, risk assessment (with baseline_score and llm_delta), and markdown report
+        JSON with id, folio data, signals, risk assessment (with baseline_score and llm_delta), and markdown report
     """
     global _graph_app, _llm
     
@@ -90,11 +90,11 @@ async def analyze_risk(folio_id: str) -> Dict[str, Any]:
         )
         _graph_app = build_app(llm=_llm)
     
-    logger.info(f"Analyzing risk for folio_id={folio_id}")
+    logger.info(f"Analyzing risk for id={id}")
     
     try:
         # Create initial state
-        initial_state = AnalyzerState(folio_id=folio_id)
+        initial_state = AnalyzerState(id=id)
         
         # Invoke the graph
         result = _graph_app.invoke(initial_state)
@@ -104,18 +104,18 @@ async def analyze_risk(folio_id: str) -> Dict[str, Any]:
         
         # Build response
         response = {
-            "folio_id": result.get("folio_id"),
+            "id": result.get("id"),
             "folio": folio_dict,
             "signals": result.get("signals", {}),
             "risk": result.get("risk", {}),
             "report": result.get("report"),
         }
         
-        logger.info(f"Analysis complete for folio_id={folio_id}, risk_level={result.get('risk', {}).get('level')}")
+        logger.info(f"Analysis complete for id={id}, risk_level={result.get('risk', {}).get('level')}")
         return response
         
     except Exception as e:
-        logger.error(f"Error analyzing folio_id={folio_id}: {e}", exc_info=True)
+        logger.error(f"Error analyzing id={id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 

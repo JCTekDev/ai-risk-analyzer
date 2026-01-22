@@ -18,7 +18,7 @@ from .schemas import AnalyzerState
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="LangGraph Joget risk analyzer")
-    parser.add_argument("--folio-id", required=True, help="Trámite folio identifier")
+    parser.add_argument("--id", required=True, help="Trámite folio identifier")
     parser.add_argument("--json", action="store_true", help="Print JSON payload instead of Markdown")
     parser.add_argument("--debug", action="store_true", help="Enable DEBUG logging")
     parser.add_argument(
@@ -41,7 +41,7 @@ def main() -> None:
     )
     logger = logging.getLogger(__name__)
     
-    logger.info(f"Starting risk analyzer for folio_id={args.folio_id}")
+    logger.info(f"Starting risk analyzer for id={args.id}")
     if args.debug:
         logger.debug("Debug mode enabled")
     
@@ -56,13 +56,13 @@ def main() -> None:
     app = build_app(llm=llm)
     logger.debug("Built LangGraph app")
     
-    result = app.invoke(AnalyzerState(folio_id=args.folio_id))
+    result = app.invoke(AnalyzerState(id=args.id))
     logger.info("Analysis complete")
 
     if args.json:
         # Convert Pydantic models to dicts for JSON serialization
         json_result = {
-            "folio_id": result.get("folio_id"),
+            "id": result.get("id"),
             "folio": result["folio"].model_dump() if result.get("folio") else None,
             "signals": result.get("signals"),
             "risk": result.get("risk"),

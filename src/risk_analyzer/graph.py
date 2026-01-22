@@ -32,9 +32,9 @@ def build_app(
     prompt = prompt_factory() if prompt_factory else _default_prompt()
 
     def fetch_tramite(state: AnalyzerState) -> dict[str, Any]:
-        logger.info(f"fetch_tramite: Loading folio_id={state.folio_id}")
-        folio = client.fetch_tramite(state.folio_id)
-        logger.debug(f"fetch_tramite: Received folio={folio.folio_id}, ramo={folio.ramo}, prima={folio.monto_prima}")
+        logger.info(f"fetch_tramite: Loading id={state.id}")
+        folio = client.fetch_tramite(state.id)
+        logger.debug(f"fetch_tramite: Received folio={folio.id}, ramo={folio.ramo}, prima={folio.monto_prima}")
         
         signals = {
             "missing_docs": [doc.name for doc in folio.documents if doc.required and not doc.uploaded],
@@ -58,7 +58,7 @@ def build_app(
 
     def score_risk(state: AnalyzerState) -> dict[str, Any]:
         assert state.folio, "Folio data missing before scoring"
-        logger.info(f"score_risk: Calculating risk for folio={state.folio.folio_id}")
+        logger.info(f"score_risk: Calculating risk for folio={state.folio.id}")
         
         assessment = heuristic_score(state.folio, signals=state.signals)
         logger.debug(f"score_risk: Heuristic baseline score={assessment.score:.2f}, level={assessment.level}")
@@ -120,7 +120,7 @@ def build_app(
 
     def render_report(state: AnalyzerState) -> dict[str, Any]:
         assert state.folio and state.risk
-        logger.info(f"render_report: Generating report for folio={state.folio.folio_id}")
+        logger.info(f"render_report: Generating report for folio={state.folio.id}")
         
         risk = RiskAssessment.model_validate(state.risk)
         baseline_score = state.risk.get("baseline_score", risk.score)
@@ -137,7 +137,7 @@ def build_app(
             score_breakdown += f" [Heurístico: {baseline_score:.2f}]"
         
         report = [
-            f"Folio **{state.folio.folio_id}**",
+            f"Folio **{state.folio.id}**",
             f"Nivel de riesgo: {score_breakdown}",
             f"Motivo: {risk.rationale}",
         ]

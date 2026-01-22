@@ -12,7 +12,7 @@ class TramiteDocument(BaseModel):
 
 
 class TramiteFolio(BaseModel):
-    folio_id: str = Field(alias="folio")
+    id: str
     ramo: str
     tipo_tramite: str
     monto_prima: float
@@ -25,7 +25,7 @@ class TramiteFolio(BaseModel):
 
 
 class AnalyzerState(BaseModel):
-    folio_id: str
+    id: str
     folio: Optional[TramiteFolio] = None
     signals: dict = Field(default_factory=dict)
     risk: dict = Field(default_factory=dict)
